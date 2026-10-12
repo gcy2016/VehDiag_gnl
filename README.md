@@ -15,6 +15,7 @@
      - 疑似异常的状态信号（需要 DBC）
      - 信号曲线（需要 DBC）：每个信号一条泳道、各自 Y 轴；滚轮 / 双指缩放、拖动平移、双击复位、悬停取值
      - 报文提取：按 ID / 范围 / 报文名筛选，“仅诊断报文”一键筛选；点一行看解析（DBC 信号值、诊断报文的帧类型与 UDS 解释，如 7F 否定码含义）
+   - 🤖 AI 助手：接入任意大模型（DeepSeek / 通义千问 / Kimi / 智谱 / 豆包 / OpenAI / Claude，或任意 OpenAI 兼容接口），在“设置”里自备 API Key（只存在本机浏览器）；提问时自动附带当前数据，发送前可查看修改；没有 Key 可“📋 复制”粘贴到其他 AI
 
 ## 诊断问卷格式
 表头行需包含这几列（列名保持英文，网页按列名识别）：
@@ -23,4 +24,4 @@
 
 ## 文件
 `index.html` 页面；`canlog.js` 报文读取、信号解码、故障码识别；`plot.js` 曲线；`dbc.js` DBC 解析；`qn.js` 问卷解析；
-`uds.js` 通用诊断知识表；`lib/xlsx.full.min.js` Excel 读取组件（SheetJS，Apache-2.0，见 `lib/xlsx.LICENSE`）。
+`uds.js` 通用诊断知识表；`ai.js` AI 助手；`lib/xlsx.full.min.js` Excel 读取组件（SheetJS，Apache-2.0，见 `lib/xlsx.LICENSE`）。

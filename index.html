@@ -249,6 +249,11 @@
         </div>
       </div>
     </div>
+
+    <div class="card" id="aiCard" hidden>
+      <div class="step"><h2>🤖 AI 助手</h2><span class="cur">接入任意大模型，自备 API Key</span></div>
+      <div id="ai"></div>
+    </div>
   </div>
 </div>
 
@@ -257,6 +262,7 @@
 <script src="uds.js"></script>
 <script src="dbc.js"></script>
 <script src="qn.js"></script>
+<script src="ai.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const store = {
@@ -264,7 +270,7 @@ const store = {
   set(s, k, v) { try { window[s].setItem(k, v); } catch (e) {} },
 };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-let DB = { models: [] }, model = null, items = [], view = null, DBC = null, QNNAME = '', NOTE = '';
+let DB = { models: [] }, model = null, items = [], view = null, DBC = null, QNNAME = '', NOTE = '', CURIT = null, CURQ = '', LASTDTC = [], LASTEV = [], TRTXT = '';
 
 // ================= 加载资料 / 功能 =================
 function start() {
@@ -369,6 +375,7 @@ function show(v, silent) {
   document.querySelectorAll('.fns button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
   $('vDtc').hidden = v !== 'dtc';
   $('vLog').hidden = v !== 'log';
+  $('aiCard').hidden = false;
   document.body.classList.toggle('wide', v === 'log');
   $('dbcCur').textContent = DBC ? 'DBC：' + DBC.name : '未加载 DBC（只能看报文和故障码）';
   if (v === 'dtc' && !silent) $('q').focus();
@@ -401,6 +408,7 @@ function search() {
     return;
   }
   $('s3').hidden = false;
+  CURQ = q; CURIT = null;
   const exact = items.filter(it => it.d === q || it.b === q || it.bd === q);
   if (exact.length === 1) return detail(exact[0], false);
   let hits = exact;
@@ -427,6 +435,7 @@ function sec(title, it, k) {
 }
 
 function detail(it, fromList) {
+  CURIT = it;
   $('s3t').textContent = '故障信息';
   $('out').innerHTML = (fromList ? '<button class="back" id="back">‹ 返回备选列表</button>' : '') +
     `<div class="codes"><div><small>显示码</small><b>${esc(it.d)}</b></div>` +
@@ -501,6 +510,8 @@ function analyze() {
 
 function renderDTC() {
   const { dtcs, events } = CanLog.findDTCs(LOG, DBC);
+  LASTEV = events;
+  LASTDTC = dtcs.map(d => ({ ...d, it: model ? items.find(x => x.d === d.code) : null, statusText: d.src.startsWith('诊断') ? CanLog.statusText(d.st) : '' }));
   let h = '';
   if (!dtcs.length) {
     h = '<div class="msg">报文中没有发现故障码<br><small>（没有诊断仪读码应答，也没有广播的故障码信号）</small></div>';
@@ -624,6 +635,7 @@ drop.addEventListener('drop', e => openFile(e.dataTransfer.files[0]));
 const ROW = 24;
 let TIDX = new Uint32Array(0), TSEL = -1, TP = new Map(), MSGBY = new Map();
 function initTrace() {
+  TRTXT = '';
   TP = new Map();
   for (const m of CanLog.isotp(LOG)) for (const i of m.fi) TP.set(i, m);
   MSGBY = new Map(DBC ? DBC.msgs.map(m => [keyOf(m), m]) : []);
@@ -706,6 +718,7 @@ function selTrace(i, scroll) {
     if (rows) h += `<table><tr><th>信号</th><th>物理值</th><th>含义</th><th>原始值</th></tr>${rows}</table>`;
   }
   $('tdet').innerHTML = h;
+  TRTXT = $('tdet').innerText.replace(/\n{2,}/g, '\n').slice(0, 3000);
   if (!scroll && window.innerWidth < 640) $('tdet').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 $('tv').addEventListener('scroll', () => requestAnimationFrame(drawTrace));
@@ -721,6 +734,11 @@ $('tq').addEventListener('input', () => { clearTimeout(ttimer); ttimer = setTime
 $('tAll').onclick = () => { $('tq').value = ''; LOG && filterTrace(); };
 $('tDiag').onclick = () => { $('tq').value = '700-7FF'; LOG && filterTrace(); };
 
+AI.mount($('ai'), () => ({
+  view, model: model && model.model, dtcItem: CURIT, dtcQuery: CURQ,
+  log: LOG, logName: LOGNAME, dbc: DBC, dtcs: LASTDTC, events: LASTEV,
+  sigs: SIGS, win: plot ? [plot.x0, plot.x1] : [0, LOG ? LOG.dur : 0], trace: TRTXT,
+}));
 start();
 </script>
 </body>
