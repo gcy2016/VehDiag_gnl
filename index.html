@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>售后诊断助手</title>
+<style>
+  :root {
+    --bg: #f2f4f7; --card: #fff; --text: #1f2937; --muted: #6b7280;
+    --blue: #2a6db5; --blue-d: #22507f; --blue-l: #e8f0fa; --line: #d5dde8;
+    --green: #0fbf5f; --tip-bg: #eef8ef; --tip-line: #bfe3c4; --red: #d93025;
+    --warn-bg: #fff6e5; --warn-line: #f3d18b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 16px 16px 40px; }
+  body.wide .wrap { max-width: 1280px; }
+  .hero { background: linear-gradient(135deg, var(--blue-d), var(--blue)); color: #fff;
+    border-radius: 16px; padding: 20px 20px 18px; margin-bottom: 14px; }
+  .hero h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: .5px; }
+  .hero p { margin: 0; opacity: .88; font-size: 14px; }
+  .tag { display: inline-block; background: rgba(255,255,255,.2); border-radius: 6px; padding: 0 6px; font-size: 12px; margin-left: 6px; vertical-align: 3px; }
+  .card { background: var(--card); border-radius: 16px; padding: 18px 16px; margin-bottom: 14px; }
+  .step { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .num { width: 34px; height: 34px; border-radius: 50%; background: var(--blue); color: #fff;
+    display: grid; place-items: center; font-weight: 700; flex: none; }
+  .step h2 { margin: 0; font-size: 18px; }
+  .step .cur { margin-left: auto; color: var(--blue); font-size: 14px; }
+  .disabled { opacity: .45; pointer-events: none; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .grid button { padding: 14px 6px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff;
+    color: var(--blue); font-size: 16px; cursor: pointer; }
+  .grid button.on { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+  .fns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .fns button { padding: 16px 8px; border: 1.5px solid var(--line); border-radius: 14px; background: #fff; cursor: pointer;
+    color: var(--blue-d); font-size: 17px; font-weight: 600; text-align: center; }
+  .fns button small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .fns button.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .fns button.on small { color: rgba(255,255,255,.85); }
+  .search { display: flex; gap: 8px; }
+  input.q { flex: 1; min-width: 0; font-size: 18px; padding: 12px 14px; border: 1.5px solid var(--line);
+    border-radius: 12px; outline: none; text-transform: uppercase; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  input.q:focus, input.sq:focus { border-color: var(--blue); }
+  .search button { padding: 0 16px; border: 0; border-radius: 12px; background: var(--blue); color: #fff; font-size: 16px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 8px 2px 0; }
+  .msg { color: var(--muted); text-align: center; padding: 10px 0; }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .list li { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+  .list li:active, .list li:hover { background: var(--blue-l); }
+  .code { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; color: var(--blue-d); }
+  .bytes { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--muted); font-size: 13px; margin-left: 6px; }
+  .list .d { font-size: 14px; margin-top: 2px; }
+  .codes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .codes div { background: var(--blue-l); border-radius: 10px; padding: 8px; text-align: center; }
+  .codes small { display: block; color: var(--muted); font-size: 12px; }
+  .codes b { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 17px; color: var(--blue-d); }
+  .sec { margin-bottom: 14px; }
+  .sec h3 { margin: 0 0 4px; font-size: 15px; color: var(--blue-d); }
+  .sec h3::before { content: ""; display: inline-block; width: 4px; height: 14px; background: var(--blue);
+    border-radius: 2px; margin-right: 8px; vertical-align: -1px; }
+  .sec .t { white-space: pre-wrap; background: #f8fafc; border-radius: 10px; padding: 10px 12px; font-size: 15px; }
+  .sec details { margin-top: 4px; font-size: 13px; color: var(--muted); }
+  .sec details div { white-space: pre-wrap; }
+  .back { border: 0; background: none; color: var(--blue); font-size: 15px; padding: 0; margin-bottom: 10px; cursor: pointer; }
+  .tip { background: var(--tip-bg); border: 1.5px solid var(--tip-line); border-radius: 14px; padding: 12px 14px;
+    text-align: center; font-weight: 600; margin-bottom: 14px; }
+  .notes { background: #e9edf2; border-radius: 14px; padding: 12px 14px; color: #555; font-size: 14px; }
+  .notes p { margin: 4px 0; }
+  .ups { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .up { border: 2px dashed var(--line); border-radius: 14px; padding: 14px 10px; text-align: center; color: var(--muted); cursor: pointer; font-size: 14px; display: block; }
+  .up b { color: var(--blue); display: block; font-size: 16px; }
+  .up.ok { border-style: solid; border-color: #c9dbf0; background: var(--blue-l); color: var(--blue-d); }
+  .up.over { border-color: var(--blue); background: var(--blue-l); }
+  .ld { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .ld button { border: 0; background: none; color: var(--red); cursor: pointer; font-size: 13px; padding: 0 4px; }
+  @media (max-width: 480px) { .ups { grid-template-columns: 1fr; } }
+  [hidden] { display: none !important; }
+
+  /* ---- 数据分析 ---- */
+  .drop { display: block; border: 2px dashed var(--line); border-radius: 14px; padding: 22px 12px; text-align: center; color: var(--muted); cursor: pointer; }
+  .drop.over { border-color: var(--blue); background: var(--blue-l); }
+  .drop b { color: var(--blue); }
+  .bar { height: 6px; background: var(--blue-l); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+  .bar div { height: 100%; width: 0; background: var(--blue); transition: width .2s; }
+  .kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 12px; }
+  .kv div { background: #f8fafc; border-radius: 10px; padding: 6px 10px; font-size: 14px; }
+  .kv small { display: block; color: var(--muted); font-size: 12px; }
+  .warn { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 10px; padding: 8px 12px; font-size: 14px; margin-top: 10px; }
+  select { font-size: 14px; padding: 4px 8px; border: 1.5px solid var(--line); border-radius: 8px; background: #fff; }
+  .dtc { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+  .dtc .h { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+  .dtc .meta { color: var(--muted); font-size: 13px; }
+  .dtc .desc { margin-top: 4px; font-weight: 600; }
+  .dtc details { margin-top: 6px; }
+  .dtc details summary { color: var(--blue); cursor: pointer; font-size: 14px; }
+  .dtc .sec { margin: 8px 0 0; }
+  .ev { font-size: 13px; color: var(--muted); margin: 2px 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; border: 1.5px solid var(--line); border-radius: 999px;
+    padding: 2px 10px; font-size: 13px; background: #fff; cursor: pointer; max-width: 100%; }
+  .chip i { font-style: normal; width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip b { color: var(--muted); font-weight: 400; margin-left: 2px; }
+  .chip.sus { border-color: var(--warn-line); background: var(--warn-bg); }
+  .sbox { position: relative; }
+  input.sq { width: 100%; font-size: 15px; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 10px; outline: none; }
+  .drop-list { position: absolute; z-index: 5; left: 0; right: 0; top: 100%; margin-top: 4px; background: #fff; border: 1px solid var(--line);
+    border-radius: 10px; max-height: 340px; overflow: auto; box-shadow: 0 6px 20px rgba(0,0,0,.12); }
+  .drop-list div { padding: 6px 12px; cursor: pointer; border-bottom: 1px solid #f1f3f6; font-size: 14px; }
+  .drop-list div:hover, .drop-list div.act { background: var(--blue-l); }
+  .drop-list small { color: var(--muted); display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; align-items: center; }
+  .tools button { border: 1.5px solid var(--line); background: #fff; border-radius: 8px; padding: 4px 10px; font-size: 14px; cursor: pointer; color: var(--blue-d); }
+  .tools button:hover { background: var(--blue-l); }
+  .tools .sp { flex: 1; }
+  .plot { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; }
+  /* ---- 报文提取（Trace） ---- */
+  .tf { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+  .tf input { flex: 1; min-width: 200px; font-size: 15px; padding: 8px 12px; border: 1.5px solid var(--line); border-radius: 10px; outline: none; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .tf input:focus { border-color: var(--blue); }
+  .tf button { border: 1.5px solid var(--line); background: #fff; border-radius: 8px; padding: 6px 10px; font-size: 14px; cursor: pointer; color: var(--blue-d); }
+  .tf .cnt { color: var(--muted); font-size: 13px; }
+  .trace { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font: 12.5px/1 ui-monospace, Menlo, Consolas, monospace; }
+  .trow { display: grid; grid-template-columns: 92px 44px 92px 130px 34px 40px 1fr; align-items: center; height: 24px; line-height: 24px; padding: 0 8px; gap: 6px; white-space: nowrap; }
+  .trow > span { overflow: hidden; text-overflow: ellipsis; }
+  .thead { background: #f1f4f8; color: var(--muted); font-family: -apple-system, "Microsoft YaHei", sans-serif; font-size: 12px; border-bottom: 1px solid var(--line); }
+  .tview { height: 420px; overflow: auto; position: relative; outline: none; }
+  .tview .trow { position: absolute; left: 0; right: 0; cursor: pointer; }
+  .tview .trow:hover { background: #f5f8fc; }
+  .tview .trow.sel { background: var(--blue); color: #fff; }
+  .tview .trow.diag { color: var(--blue-d); background: #f3f7fc; font-weight: 600; }
+  .tview .trow.sel.diag { background: var(--blue); color: #fff; }
+  .tdet { margin-top: 12px; }
+  .tdet .hexg { font: 13px/1.7 ui-monospace, Menlo, Consolas, monospace; background: #f8fafc; border-radius: 10px; padding: 8px 12px; word-break: break-all; }
+  .tdet table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  .tdet td, .tdet th { border-bottom: 1px solid #eef1f5; padding: 4px 6px; text-align: left; vertical-align: top; }
+  .tdet th { color: var(--muted); font-weight: 400; }
+  .tdet .uds { background: var(--blue-l); border: 1px solid #c9dbf0; border-radius: 10px; padding: 8px 12px; margin-top: 8px; font-size: 14px; white-space: pre-wrap; }
+  @media (max-width: 640px) {
+    .trow { grid-template-columns: 74px 70px 1fr; }
+    .trow > :nth-child(2), .trow > :nth-child(4), .trow > :nth-child(5), .trow > :nth-child(6) { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1>🔧 售后诊断助手<span class="tag">通用版</span></h1>
+    <p>自行加载 DBC 与诊断问卷 · DTC 查询 · 报文数据分析</p>
+    <p>👇 先加载资料，再选功能 · 所有文件只在本机浏览器内读取，不会上传</p>
+  </div>
+
+  <div id="app">
+    <div class="card">
+      <div class="step"><div class="num">1</div><h2>加载资料</h2></div>
+      <div class="ups">
+        <label class="up" id="upDbc"><input type="file" id="fDbc" multiple hidden><b>📑 DBC</b><span id="dbcSt">点击选择 .dbc 文件（可多选）</span></label>
+        <label class="up" id="upQn"><input type="file" id="fQn" hidden><b>📋 诊断问卷</b><span id="qnSt">点击选择 Excel（.xlsx）</span></label>
+      </div>
+      <div class="ld" id="ld"></div>
+      <div id="qnPick" hidden>
+        <p class="hint" style="margin:12px 2px 8px">问卷有多个 Sheet，请选择对应的车型 / 配置：</p>
+        <div class="grid" id="models"></div>
+      </div>
+      <p class="hint">DBC 用于解析信号、画曲线；诊断问卷用于查询故障码含义。两者都可以不加载，加载后会记在本机浏览器里，下次打开不用重新选择。</p>
+    </div>
+
+    <div class="card" id="s2">
+      <div class="step"><div class="num">2</div><h2>选择功能</h2><span class="cur" id="cur"></span></div>
+      <div class="fns">
+        <button data-v="dtc">🔍 故障码查询<small>输入 DTC 查含义、原因、维修建议</small></button>
+        <button data-v="log">📈 数据分析<small>读取 blf / asc 报文、识别故障码、画曲线</small></button>
+      </div>
+    </div>
+
+    <!-- 故障码查询 -->
+    <div id="vDtc" hidden>
+      <div class="card">
+        <div class="step"><div class="num">3</div><h2>输入 DTC 码</h2></div>
+        <form class="search" id="form" autocomplete="off">
+          <input class="q" id="q" placeholder="如 U210088 / E10088 / E100" enterkeyhint="search" spellcheck="false">
+          <button type="submit">查询</button>
+        </form>
+        <p class="hint">完整显示码或高中低字节 → 直接定位；只输高中字节 → 列出全部备选。“0x”前缀和空格会自动忽略。</p>
+      </div>
+      <div class="card" id="s3" hidden>
+        <div class="step"><div class="num">4</div><h2 id="s3t">查询结果</h2></div>
+        <div id="out"></div>
+      </div>
+      <div class="tip">💡 维修前请先确认诊断问卷与车型对应正确</div>
+      <div class="notes">
+        <p>⚠️ 显示码为诊断仪上显示的码（如 U210088），高中字节/低字节为十六进制（如 E100 + 88）。</p>
+        <p>⚠️ 微信内打不开？点右上角 ··· → <b>在浏览器中打开</b>。</p>
+      </div>
+    </div>
+
+    <!-- 数据分析 -->
+    <div id="vLog" hidden>
+      <div class="card">
+        <div class="step"><div class="num">3</div><h2>打开报文</h2><span class="cur" id="dbcCur"></span></div>
+        <label class="drop" id="drop">
+          <!-- 不设 accept：iOS 不认识 .blf 扩展名，会把文件置灰无法选择；扩展名在读取时检查 -->
+          <input type="file" id="file" hidden>
+          📂 点击选择或拖入 <b>.blf</b> / <b>.asc</b> 报文文件<br><small>文件只在本机浏览器内解析，不会上传</small>
+        </label>
+        <div class="bar" id="bar" hidden><div></div></div>
+        <div id="info"></div>
+      </div>
+
+      <div id="res" hidden>
+        <div class="card">
+          <div class="step"><div class="num">4</div><h2>故障码识别</h2></div>
+          <div id="dtcOut"></div>
+        </div>
+        <div class="card" id="susCard" hidden>
+          <div class="step"><h2>⚠️ 疑似异常的状态信号</h2></div>
+          <p class="hint" style="margin:-8px 0 10px">报文中出现过“故障 / 报警 / 无效”类取值的信号，点一下加入曲线。</p>
+          <div class="chips" id="susOut"></div>
+        </div>
+        <div class="card">
+          <div class="step"><div class="num">5</div><h2>信号曲线</h2></div>
+          <div class="sbox">
+            <input class="sq" id="sq" placeholder="搜索信号名 / 报文名 / 注释，如 VehicleSpeed、轮速" autocomplete="off" spellcheck="false">
+            <div class="drop-list" id="sl" hidden></div>
+          </div>
+          <div class="chips" id="chips" style="margin-top:10px"></div>
+          <div class="tools">
+            <button id="zin">＋ 放大</button><button id="zout">－ 缩小</button><button id="zall">⟲ 全部</button>
+            <span class="sp"></span>
+            <button id="hdec">窗口变矮</button><button id="hinc">窗口变高</button><button id="clr">清空曲线</button>
+          </div>
+          <div class="plot" id="plot"></div>
+          <p class="hint">滚轮 / 双指缩放时间轴，按住拖动平移，双击复位；鼠标悬停查看各信号当前值。</p>
+        </div>
+        <div class="card">
+          <div class="step"><div class="num">6</div><h2>报文提取</h2></div>
+          <div class="tf">
+            <input id="tq" placeholder="筛选 ID：788 7DF / 700-7FF / 报文名，留空显示全部" autocomplete="off" spellcheck="false">
+            <button id="tAll">全部</button><button id="tDiag">仅诊断报文</button>
+            <span class="cnt" id="tCnt"></span>
+          </div>
+          <div class="trace">
+            <div class="trow thead"><span>时间 s</span><span>通道</span><span>ID</span><span>名称</span><span>方向</span><span>长度</span><span>数据</span></div>
+            <div class="tview" id="tv" tabindex="0"><div id="tsp"></div></div>
+          </div>
+          <p class="hint">点一行查看解析：DBC 报文显示各信号值；诊断报文（蓝色加粗）按通用诊断知识解释，如 7F 负响应的含义。选中后可用 ↑ ↓ 键切换。</p>
+          <div class="tdet" id="tdet"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="canlog.js"></script>
+<script src="plot.js"></script>
+<script src="uds.js"></script>
+<script src="dbc.js"></script>
+<script src="qn.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const store = {
+  get(s, k) { try { return window[s].getItem(k); } catch (e) { return null; } },
+  set(s, k, v) { try { window[s].setItem(k, v); } catch (e) {} },
+};
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let DB = { models: [] }, model = null, items = [], view = null, DBC = null, QNNAME = '', NOTE = '';
+
+// ================= 加载资料 / 功能 =================
+function start() {
+  document.querySelectorAll('.fns button').forEach(b => b.onclick = () => show(b.dataset.v));
+  try { const x = JSON.parse(store.get('localStorage', 'gnl_dbc')); if (x) DBC = x; } catch (e) {}
+  try { const x = JSON.parse(store.get('localStorage', 'gnl_qn')); if (x) { DB = x; QNNAME = x.file || ''; } } catch (e) {}
+  renderLoaded();
+  const last = DB.models.findIndex(m => m.model === store.get('localStorage', 'gnl_model'));
+  if (DB.models.length) pick(last >= 0 ? last : 0, true);
+  show(store.get('localStorage', 'gnl_view') || 'dtc', true);
+}
+
+const save = (k, v) => {
+  try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; }
+};
+function renderLoaded() {
+  const nSig = DBC ? DBC.msgs.reduce((a, m) => a + m.sigs.length, 0) : 0;
+  $('upDbc').classList.toggle('ok', !!DBC);
+  $('dbcSt').textContent = DBC ? `${DBC.name}（${DBC.msgs.length} 帧 / ${nSig} 信号）` : '点击选择 .dbc 文件（可多选）';
+  $('upQn').classList.toggle('ok', DB.models.length > 0);
+  $('qnSt').textContent = DB.models.length ? `${QNNAME}（${DB.models.length} 个 Sheet）` : '点击选择 Excel（.xlsx）';
+  const parts = [];
+  if (DBC) parts.push('DBC 已加载 <button id="rmDbc">清除</button>');
+  if (DB.models.length) parts.push('问卷已加载 <button id="rmQn">清除</button>');
+  $('ld').innerHTML = parts.join(' · ') + (NOTE ? `<br>⚠️ ${esc(NOTE)}` : '');
+  NOTE = '';
+  if ($('rmDbc')) $('rmDbc').onclick = e => { e.preventDefault(); DBC = null; save('gnl_dbc', null); renderLoaded(); if (LOG) analyze(); };
+  if ($('rmQn')) $('rmQn').onclick = e => {
+    e.preventDefault(); DB = { models: [] }; model = null; items = []; QNNAME = ''; save('gnl_qn', null); renderLoaded(); renderModels();
+    $('cur').textContent = ''; if ($('q').value) search(); if (LOG) analyze();
+  };
+  renderModels();
+}
+function renderModels() {
+  const box = $('models');
+  box.innerHTML = '';
+  DB.models.forEach((m, i) => {
+    const b = document.createElement('button');
+    b.textContent = m.model;
+    b.classList.toggle('on', m === model);
+    b.onclick = () => pick(i);
+    box.appendChild(b);
+  });
+  $('qnPick').hidden = DB.models.length < 2;
+}
+
+async function loadDbc(files) {
+  if (!files.length) return;
+  $('dbcSt').textContent = '正在读取…';
+  try {
+    const list = [];
+    for (const f of files) {
+      if (!/\.dbc$/i.test(f.name)) throw new Error(`${f.name} 不是 .dbc 文件`);
+      const d = Dbc.parse(Dbc.decode(new Uint8Array(await f.arrayBuffer())), f.name.replace(/\.dbc$/i, ''));
+      if (!d.msgs.length) throw new Error(`${f.name} 里没有找到报文定义`);
+      list.push(d);
+    }
+    DBC = list.length > 1 ? Dbc.merge(list) : list[0];
+    if (!save('gnl_dbc', DBC)) NOTE = 'DBC 太大，未能记在本机，下次需要重新选择';
+  } catch (e) { alert('DBC 读取失败：' + (e.message || e)); }
+  renderLoaded();
+  if (LOG) analyze();
+}
+
+let xlsxReady = null;
+const loadXlsx = () => xlsxReady || (xlsxReady = new Promise((ok, no) => {
+  const sc = document.createElement('script');
+  sc.src = 'lib/xlsx.full.min.js'; sc.onload = ok; sc.onerror = () => { xlsxReady = null; no(new Error('Excel 解析组件加载失败，请检查网络')); };
+  document.head.appendChild(sc);
+}));
+async function loadQn(f) {
+  if (!f) return;
+  $('qnSt').textContent = '正在读取…';
+  try {
+    if (!/\.xls[xm]?$/i.test(f.name)) throw new Error('请选择 Excel 文件（.xlsx）');
+    await loadXlsx();
+    const models = Qn.parse(await f.arrayBuffer());
+    if (!models.length) throw new Error('没有识别到故障码。表头需包含 DTC Number / Faults Types / Possible Fault / Corrective 列');
+    DB = { models, file: f.name };
+    QNNAME = f.name;
+    model = null;
+    if (!save('gnl_qn', DB)) NOTE = '问卷太大，未能记在本机，下次需要重新选择';
+    renderLoaded();
+    pick(0, true);
+  } catch (e) { alert('诊断问卷读取失败：' + (e.message || e)); renderLoaded(); }
+}
+
+function pick(i, silent) {
+  model = DB.models[i];
+  items = model.items.map(it => ({ ...it, b: it.hm + it.l, bd: dispToHex(it.d) }));
+  [...$('models').children].forEach((b, j) => b.classList.toggle('on', i === j));
+  $('cur').textContent = DB.models.length > 1 ? '问卷：' + model.model : '';
+  store.set('localStorage', 'gnl_model', model.model);
+  if ($('q').value) search(); else $('s3').hidden = true;
+  if (LOG) analyze();
+  if (!silent) show(view || 'dtc');
+}
+
+function show(v, silent) {
+  view = v;
+  store.set('localStorage', 'gnl_view', v);
+  document.querySelectorAll('.fns button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  $('vDtc').hidden = v !== 'dtc';
+  $('vLog').hidden = v !== 'log';
+  document.body.classList.toggle('wide', v === 'log');
+  $('dbcCur').textContent = DBC ? 'DBC：' + DBC.name : '未加载 DBC（只能看报文和故障码）';
+  if (v === 'dtc' && !silent) $('q').focus();
+  if (v === 'log' && plot) plot.draw();
+}
+
+$('fDbc').addEventListener('change', e => { loadDbc([...e.target.files]); e.target.value = ''; });
+$('fQn').addEventListener('change', e => { loadQn(e.target.files[0]); e.target.value = ''; });
+for (const [box, fn] of [['upDbc', fs => loadDbc(fs)], ['upQn', fs => loadQn(fs[0])]]) {
+  const el = $(box);
+  ['dragenter', 'dragover'].forEach(t => el.addEventListener(t, e => { e.preventDefault(); el.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => el.addEventListener(t, e => { e.preventDefault(); el.classList.remove('over'); }));
+  el.addEventListener('drop', e => fn([...e.dataTransfer.files]));
+}
+
+// ================= 故障码查询 =================
+const norm = s => s.toUpperCase().replace(/0X/g, '').replace(/[^0-9A-Z]/g, '');
+// 显示码 → 3 字节 hex：首字母 P/C/B/U = 00/01/10/11 放在最高两位
+function dispToHex(d) {
+  const n = 'PCBU'.indexOf(d[0]);
+  return n < 0 ? '' : ((n << 2) | parseInt(d[1], 16)).toString(16).toUpperCase() + d.slice(2);
+}
+
+function search() {
+  const q = norm($('q').value);
+  if (!q) { $('s3').hidden = true; return; }
+  if (!model) {
+    $('s3').hidden = false; $('s3t').textContent = '查询结果';
+    $('out').innerHTML = '<div class="msg">还没有加载诊断问卷<br>请先在 ① 选择问卷 Excel</div>';
+    return;
+  }
+  $('s3').hidden = false;
+  const exact = items.filter(it => it.d === q || it.b === q || it.bd === q);
+  if (exact.length === 1) return detail(exact[0], false);
+  let hits = exact;
+  if (!hits.length && q.length >= 2)
+    hits = items.filter(it => it.d.startsWith(q) || it.b.startsWith(q) || it.bd.startsWith(q));
+  list(hits, q);
+}
+
+function list(hits, q) {
+  $('s3t').textContent = hits.length ? `找到 ${hits.length} 条备选` : '查询结果';
+  if (!hits.length) {
+    $('out').innerHTML = `<div class="msg">「${esc(model.model)}」中没有找到 <span class="code">${esc(q)}</span><br>请核对问卷和故障码</div>`;
+    return;
+  }
+  $('out').innerHTML = '<ul class="list">' + hits.map((it, i) =>
+    `<li data-i="${i}"><span class="code">${esc(it.d)}</span><span class="bytes">${esc(it.hm)} ${esc(it.l)}</span>` +
+    `<div class="d">${esc(it.desc || '（未填写）')}</div></li>`).join('') + '</ul>';
+  $('out').querySelectorAll('li').forEach(li => li.onclick = () => detail(hits[li.dataset.i], true));
+}
+
+function sec(title, it, k) {
+  const en = it[k + '_en'] ? `<details><summary>查看英文原文</summary><div>${esc(it[k + '_en'])}</div></details>` : '';
+  return `<div class="sec"><h3>${title}</h3><div class="t">${esc(it[k] || '（表中未填写）')}</div>${en}</div>`;
+}
+
+function detail(it, fromList) {
+  $('s3t').textContent = '故障信息';
+  $('out').innerHTML = (fromList ? '<button class="back" id="back">‹ 返回备选列表</button>' : '') +
+    `<div class="codes"><div><small>显示码</small><b>${esc(it.d)}</b></div>` +
+    `<div><small>高中字节</small><b>${esc(it.hm)}</b></div><div><small>低字节</small><b>${esc(it.l)}</b></div></div>` +
+    sec('故障描述', it, 'desc') + sec('可能原因', it, 'cause') + sec('维修建议', it, 'fix');
+  if (fromList) $('back').onclick = search;
+  $('s3').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+let timer;
+$('q').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(search, 250); });
+$('form').addEventListener('submit', e => { e.preventDefault(); $('q').blur(); search(); });
+
+// ================= 数据分析 =================
+let LOG = null, LOGNAME = '', SIGS = [], plot = null, plotH = 0;
+const keyOf = m => m.ext ? (m.id | CanLog.EXT) >>> 0 : m.id;
+const hexId = id => '0x' + (id & 0x1FFFFFFF).toString(16).toUpperCase() + (id & CanLog.EXT ? 'x' : '');
+const fmtT = t => t.toFixed(3) + ' s';
+
+async function openFile(f) {
+  if (!f) return;
+  $('bar').hidden = false;
+  const bar = $('bar').firstElementChild;
+  bar.style.width = '2%';
+  $('info').innerHTML = `<p class="hint">正在读取 ${esc(f.name)} …</p>`;
+  try {
+    LOG = await CanLog.read(f.name, await f.arrayBuffer(), p => bar.style.width = Math.round(p * 100) + '%');
+    LOGNAME = f.name;
+    bar.style.width = '100%';
+    SIGS = [];
+    analyze();
+  } catch (e) {
+    LOG = null;
+    $('info').innerHTML = `<div class="warn">读取失败：${esc(e.message || e)}</div>`;
+    $('res').hidden = true;
+  }
+  setTimeout(() => $('bar').hidden = true, 600);
+}
+
+function analyze() {
+  if (!LOG) return;
+  const known = DBC ? new Set(DBC.msgs.map(keyOf)) : new Set();
+  const unknown = [...LOG.byId.keys()].filter(id => !known.has(id)).sort((a, b) => a - b);
+  let mfr = 0;
+  for (const id of known) if (LOG.byId.has(id)) mfr += LOG.byId.get(id).length;
+  let fd = 0;
+  for (let i = 0; i < LOG.n; i++) if (LOG.fl[i] & 2) fd++;
+  const chs = [...new Set(LOG.ch)].sort().map(c => 'CAN' + c).join(' ');
+  let h = '<div class="kv">' +
+    `<div><small>文件</small>${esc(LOGNAME)}</div><div><small>时长</small>${LOG.dur.toFixed(2)} s</div>` +
+    `<div><small>帧数</small>${LOG.n}${fd ? `（FD ${fd}）` : ''}</div><div><small>通道</small>${chs || '-'}</div>` +
+    `<div><small>报文 ID</small>${LOG.byId.size} 个</div>` +
+    `<div><small>DBC 能解析</small>${DBC ? `${[...known].filter(id => LOG.byId.has(id)).length} 个 ID / ${LOG.n ? Math.round(mfr / LOG.n * 100) : 0}% 帧` : '未加载 DBC'}</div></div>`;
+  if (DBC && LOG.n && mfr / LOG.n < 0.3)
+    h += `<div class="warn">DBC 只能解析 ${Math.round(mfr / LOG.n * 100)}% 的帧，请确认 DBC 和报文是否属于同一车型 / 网段。</div>`;
+  if (DBC && unknown.length)
+    h += `<details class="hint"><summary>DBC 中没有定义的 ID（${unknown.length} 个）</summary>${unknown.map(id =>
+      `${hexId(id)}（${LOG.byId.get(id).length} 帧）`).join('、')}</details>`;
+  $('info').innerHTML = h;
+  show(view);
+  $('res').hidden = false;
+  renderDTC();
+  renderSuspects();
+  buildIndex();
+  // 换 DBC 后保留同名信号
+  const keep = SIGS.map(s => s.key);
+  SIGS = [];
+  for (const k of keep) { const x = INDEX.find(e => e.key === k); if (x) addSig(x, true); }
+  renderSigs();
+  initTrace();
+}
+
+function renderDTC() {
+  const { dtcs, events } = CanLog.findDTCs(LOG, DBC);
+  let h = '';
+  if (!dtcs.length) {
+    h = '<div class="msg">报文中没有发现故障码<br><small>（没有诊断仪读码应答，也没有广播的故障码信号）</small></div>';
+  } else {
+    h += `<p class="hint" style="margin:-6px 0 10px">共 ${dtcs.length} 个${model ? `，按问卷「${esc(model.model)}」解析` : '（未加载诊断问卷，只显示故障码）'}：</p>`;
+    for (const d of dtcs) {
+      const it = model && items.find(x => x.d === d.code);
+      const diag = d.src.startsWith('诊断');
+      h += `<div class="dtc"><div class="h"><span class="code" style="font-size:17px">${esc(d.code)}</span>` +
+        `<span class="bytes">${esc(d.b)}</span><span class="meta">${esc(d.ecu)} · ${esc(d.src)}</span></div>` +
+        `<div class="meta">状态：${diag ? esc(CanLog.statusText(d.st)) + `（0x${d.st.toString(16).toUpperCase().padStart(2, '0')}）` : '0x' + d.st.toString(16).toUpperCase().padStart(2, '0')}` +
+        ` · 首次 ${fmtT(d.t)}${d.n > 1 ? ` · 共 ${d.n} 次，最后 ${fmtT(d.tl)}` : ''}</div>`;
+      if (it) {
+        h += `<div class="desc">${esc(it.desc || '（未填写）')}</div>`;
+        h += `<details><summary>可能原因与维修建议</summary>${sec('可能原因', it, 'cause')}${sec('维修建议', it, 'fix')}</details>`;
+      } else if (model) {
+        h += '<div class="meta" style="margin-top:4px">问卷中未收录该故障码</div>';
+      }
+      h += '</div>';
+    }
+  }
+  if (events.length)
+    h += '<details open><summary class="hint">诊断过程</summary>' + events.map(e =>
+      `<div class="ev">${fmtT(e.t)} · ${esc(e.ecu)} · ${esc(e.text)}</div>`).join('') + '</details>';
+  $('dtcOut').innerHTML = h;
+}
+
+function renderSuspects() {
+  const sus = CanLog.suspects(LOG, DBC);
+  $('susCard').hidden = !sus.length;
+  const byKey = new Map();
+  for (const s of sus) {
+    const k = s.msg + '.' + s.sig;
+    if (!byKey.has(k)) byKey.set(k, { ...s, vals: [] });
+    byKey.get(k).vals.push(s.text);
+  }
+  $('susOut').innerHTML = [...byKey.entries()].map(([k, s]) =>
+    `<span class="chip sus" data-k="${esc(k)}" title="${esc(s.msg)} · 首次 ${fmtT(s.t)}"><span>${esc(s.sig)}</span><b>${esc(s.vals.join(' / '))}</b></span>`).join('');
+  $('susOut').querySelectorAll('.chip').forEach(c => c.onclick = () => {
+    const x = INDEX.find(e => e.key === c.dataset.k); if (x) addSig(x);
+  });
+}
+
+// ---- 信号搜索 ----
+let INDEX = [];
+function buildIndex() {
+  INDEX = [];
+  if (!DBC) return;
+  for (const m of DBC.msgs) {
+    const n = (LOG.byId.get(keyOf(m)) || []).length;
+    for (const s of m.sigs) INDEX.push({ key: m.name + '.' + s.n, m, s, n, text: (s.n + ' ' + m.name + ' ' + (s.c || '')).toLowerCase() });
+  }
+}
+
+let act = 0, hits = [];
+function searchSig() {
+  const q = $('sq').value.trim().toLowerCase();
+  if (!q) { $('sl').hidden = true; return; }
+  const words = q.split(/\s+/);
+  hits = INDEX.filter(e => words.every(w => e.text.includes(w)))
+    .map(e => { const n = e.s.n.toLowerCase(); return [e, (e.n ? 0 : 4) + (n === q ? 0 : n.startsWith(words[0]) ? 1 : n.includes(words[0]) ? 2 : 3)]; })
+    .sort((a, b) => a[1] - b[1]).map(x => x[0])
+    .slice(0, 80);
+  act = 0;
+  $('sl').hidden = false;
+  $('sl').innerHTML = hits.length ? hits.map((e, i) =>
+    `<div data-i="${i}" class="${i ? '' : 'act'}" style="${e.n ? '' : 'opacity:.5'}">${esc(e.s.n)}${e.s.u ? ` <small style="display:inline">[${esc(e.s.u)}]</small>` : ''}` +
+    `<small>${esc(e.m.name)} · ${e.n ? e.n + ' 帧' : '报文中没有这一帧'}${e.s.c ? ' · ' + esc(e.s.c.replace(/\s+/g, ' ')) : ''}</small></div>`).join('')
+    : '<div class="hint">没有匹配的信号</div>';
+  $('sl').querySelectorAll('[data-i]').forEach(d => d.onmousedown = e => { e.preventDefault(); pickHit(+d.dataset.i); });
+}
+function pickHit(i) {
+  if (!hits[i]) return;
+  addSig(hits[i]);
+  $('sq').value = '';
+  $('sl').hidden = true;
+}
+$('sq').addEventListener('input', searchSig);
+$('sq').addEventListener('focus', searchSig);
+$('sq').addEventListener('blur', () => setTimeout(() => $('sl').hidden = true, 150));
+$('sq').addEventListener('keydown', e => {
+  const rows = $('sl').querySelectorAll('[data-i]');
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    act = Math.max(0, Math.min(rows.length - 1, act + (e.key === 'ArrowDown' ? 1 : -1)));
+    rows.forEach((r, i) => r.classList.toggle('act', i === act));
+    rows[act] && rows[act].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') { e.preventDefault(); pickHit(act); }
+  else if (e.key === 'Escape') $('sl').hidden = true;
+});
+
+// ---- 曲线 ----
+function addSig(e, quiet) {
+  if (SIGS.some(s => s.key === e.key)) return;
+  const d = CanLog.decodeSignal(LOG, e.m, e.s);
+  SIGS.push({ key: e.key, name: e.s.n, unit: e.s.u, t: d.t, v: d.v, raw: d.raw, vt: e.s.vt, step: !!e.s.vt || e.s.bl <= 3, msg: e.m.name });
+  if (!quiet) renderSigs();
+}
+function renderSigs() {
+  if (!plot) plot = new Plot($('plot'));
+  plot.set(SIGS, LOG ? LOG.dur : 1, SIGS.length > 1);
+  $('chips').innerHTML = SIGS.map((s, i) =>
+    `<span class="chip" title="${esc(s.msg)}${s.t.length ? '' : ' · 报文中没有数据'}"><i style="background:${s.color}"></i><span>${esc(s.name)}</span>` +
+    `${s.t.length ? '' : '<b>无数据</b>'}<b data-i="${i}" style="cursor:pointer">✕</b></span>`).join('');
+  $('chips').querySelectorAll('b[data-i]').forEach(b => b.onclick = () => { SIGS.splice(+b.dataset.i, 1); renderSigs(); });
+}
+$('zin').onclick = () => plot && plot.zoom(0.5);
+$('zout').onclick = () => plot && plot.zoom(2);
+$('zall').onclick = () => plot && plot.reset();
+$('hinc').onclick = () => { plotH = plot.geom().H * 1.25; plot.setHeight(plotH); };
+$('hdec').onclick = () => { plotH = Math.max(200, plot.geom().H / 1.25); plot.setHeight(plotH); };
+$('clr').onclick = () => { SIGS = []; renderSigs(); };
+
+$('file').addEventListener('change', e => { openFile(e.target.files[0]); e.target.value = ''; });
+const drop = $('drop');
+['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => openFile(e.dataTransfer.files[0]));
+
+// ================= 报文提取（Trace） =================
+const ROW = 24;
+let TIDX = new Uint32Array(0), TSEL = -1, TP = new Map(), MSGBY = new Map();
+function initTrace() {
+  TP = new Map();
+  for (const m of CanLog.isotp(LOG)) for (const i of m.fi) TP.set(i, m);
+  MSGBY = new Map(DBC ? DBC.msgs.map(m => [keyOf(m), m]) : []);
+  TSEL = -1;
+  $('tdet').innerHTML = '';
+  filterTrace();
+}
+// 筛选：十六进制 ID（可带 0x，扩展帧可带 x 后缀）、范围 700-7FF、报文名（包含即可）
+function filterTrace() {
+  const toks = $('tq').value.trim().split(/[\s,，;；]+/).filter(Boolean);
+  let ids = null;
+  if (toks.length) {
+    ids = new Set();
+    for (const id of LOG.byId.keys()) {
+      const raw = id & 0x1FFFFFFF, nm = (MSGBY.get(id) || {}).name || '';
+      for (const t of toks) {
+        const r = t.match(/^(?:0x)?([0-9a-f]+)\s*-\s*(?:0x)?([0-9a-f]+)$/i);
+        const h = t.match(/^(?:0x)?([0-9a-f]+)x?$/i);
+        if ((r && raw >= parseInt(r[1], 16) && raw <= parseInt(r[2], 16)) ||
+            (h && raw === parseInt(h[1], 16)) || (nm && nm.toLowerCase().includes(t.toLowerCase()))) { ids.add(id); break; }
+      }
+    }
+  }
+  if (!ids) TIDX = Uint32Array.from({ length: LOG.n }, (_, i) => i);
+  else {
+    const a = [];
+    for (let i = 0; i < LOG.n; i++) if (ids.has(LOG.id[i])) a.push(i);
+    TIDX = Uint32Array.from(a);
+  }
+  $('tCnt').textContent = `显示 ${TIDX.length} / ${LOG.n} 帧`;
+  $('tsp').style.height = TIDX.length * ROW + 'px';
+  $('tv').scrollTop = 0;
+  drawTrace();
+}
+const hexOf = (u8, max) => {
+  let s = '';
+  for (let i = 0; i < u8.length && (!max || i < max); i++) s += (i ? ' ' : '') + u8[i].toString(16).toUpperCase().padStart(2, '0');
+  return s + (max && u8.length > max ? ' …' : '');
+};
+function drawTrace() {
+  const v = $('tv'), a = Math.max(0, Math.floor(v.scrollTop / ROW) - 5), b = Math.min(TIDX.length, a + Math.ceil(v.clientHeight / ROW) + 10);
+  let h = '';
+  for (let k = a; k < b; k++) {
+    const i = TIDX[k], id = LOG.id[i], m = MSGBY.get(id), d = LOG.bytes(i);
+    h += `<div class="trow${i === TSEL ? ' sel' : ''}${CanLog.isDiagId(id) ? ' diag' : ''}" style="top:${k * ROW}px" data-i="${i}">` +
+      `<span>${LOG.t[i].toFixed(6)}</span><span>CAN${LOG.ch[i]}</span><span>${hexId(id)}</span><span>${m ? esc(m.name) : ''}</span>` +
+      `<span>${LOG.fl[i] & 1 ? 'Tx' : 'Rx'}</span><span>${LOG.fl[i] & 4 ? 'R' : d.length}${LOG.fl[i] & 2 ? ' FD' : ''}</span><span>${hexOf(d, 24)}</span></div>`;
+  }
+  $('tsp').innerHTML = h;
+}
+function selTrace(i, scroll) {
+  TSEL = i;
+  drawTrace();
+  if (scroll) {
+    const k = TIDX.indexOf(i), v = $('tv');
+    if (k * ROW < v.scrollTop) v.scrollTop = k * ROW;
+    else if ((k + 1) * ROW > v.scrollTop + v.clientHeight) v.scrollTop = (k + 1) * ROW - v.clientHeight;
+  }
+  const id = LOG.id[i], d = LOG.bytes(i), m = MSGBY.get(id);
+  let h = `<div class="kv"><div><small>时间</small>${LOG.t[i].toFixed(6)} s</div><div><small>ID</small>${hexId(id)}${LOG.fl[i] & 2 ? ' · CAN FD' : ''}</div>` +
+    `<div><small>报文</small>${m ? esc(m.name) + ' · 发送方 ' + esc(m.tx) : 'DBC 未定义'}</div><div><small>方向 / 长度</small>${LOG.fl[i] & 1 ? 'Tx' : 'Rx'} · ${d.length} 字节</div></div>` +
+    `<div class="hexg" style="margin-top:8px">${hexOf(d) || '（无数据）'}</div>`;
+  if (CanLog.isDiagId(id)) {
+    const tp = TP.get(i), lines = [];
+    lines.push('传输层：' + CanLog.tpFrame(d));
+    if (tp) {
+      if (tp.fi.length > 1) lines.push(`完整报文由 ${tp.fi.length} 帧拼成：${hexOf(tp.p, 64)}`);
+      lines.push(...CanLog.udsExplain(tp.p, UDS));
+    } else if ((d[0] >> 4) === 3) lines.push('流控帧由接收方发出，告诉发送方如何继续发送后续连续帧。');
+    h += `<div class="uds">${esc(lines.join('\n'))}</div>`;
+  }
+  if (m && d.length) {
+    const mux = m.sigs.find(s => s.mux === 'M'), mv = mux ? CanLog.rawValue(d, mux) : null;
+    const rows = m.sigs.filter(s => typeof s.mux !== 'number' || s.mux === mv).map(s => {
+      const r = CanLog.rawValue(d, s);
+      if (r === null) return '';
+      const v = r * s.f + s.o, txt = s.vt && s.vt[r] !== undefined ? s.vt[r] : '';
+      return `<tr><td>${esc(s.n)}</td><td>${Number.isInteger(v) ? v : Number(v.toPrecision(7))} ${esc(s.u)}</td><td>${esc(txt)}</td><td>0x${r.toString(16).toUpperCase()}</td></tr>`;
+    }).join('');
+    if (rows) h += `<table><tr><th>信号</th><th>物理值</th><th>含义</th><th>原始值</th></tr>${rows}</table>`;
+  }
+  $('tdet').innerHTML = h;
+  if (!scroll && window.innerWidth < 640) $('tdet').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+$('tv').addEventListener('scroll', () => requestAnimationFrame(drawTrace));
+$('tv').addEventListener('click', e => { const r = e.target.closest('.trow'); if (r) selTrace(+r.dataset.i); });
+$('tv').addEventListener('keydown', e => {
+  if (TSEL < 0 || !['ArrowDown', 'ArrowUp'].includes(e.key)) return;
+  e.preventDefault();
+  const k = TIDX.indexOf(TSEL) + (e.key === 'ArrowDown' ? 1 : -1);
+  if (k >= 0 && k < TIDX.length) selTrace(TIDX[k], true);
+});
+let ttimer;
+$('tq').addEventListener('input', () => { clearTimeout(ttimer); ttimer = setTimeout(() => LOG && filterTrace(), 300); });
+$('tAll').onclick = () => { $('tq').value = ''; LOG && filterTrace(); };
+$('tDiag').onclick = () => { $('tq').value = '700-7FF'; LOG && filterTrace(); };
+
+start();
+</script>
+</body>
+</html>
