@@ -2,7 +2,7 @@
 
 **当前仓库：VehDiag_gnl（General 通用版）**——功能和自用版（SEF）一致：故障码查询、报文数据分析（故障码识别、疑似异常、信号曲线、报文提取）、AI 助手。但仓库里只有代码，不含任何车型资料：DBC 和诊断问卷 Excel 都由使用者自己上传（只存在本机浏览器）。公开、不需要密码。
 
-- 文件：`index.html`；`canlog.js`、`plot.js`、`ai.js` 与 SEF 的 `tools/web/` 同源，改了要同步；`dbc.js` 是 SEF `tools/dbc.py` 的 JS 版，`qn.js` 解析问卷（SHR 有同一份 `qn.js` 和故障码查询页面代码，改了要同步），`uds.js` 是 SEF `tools/uds.json` 的副本；`诊断问卷模板.xlsx` 只放通用示例码。
+- 文件：`index.html`；`canlog.js`、`plot.js`、`ai.js` 与 SEF 的 `tools/web/` 同源，改了要同步；`dbc.js` 是 SEF `tools/dbc.py` 的 JS 版，`qn.js` 解析问卷（SHR 有同一份 `qn.js` 和故障码查询页面代码，改了要同步），`uds.js` 是 SEF `tools/uds.json` 的副本。仓库里不放问卷模板或任何资料文件（页面声明“不包含非代码类文件”）。
 - 不要把任何真实 DBC、问卷或报文放进这个仓库。
 
 ## 四个仓库的定位（同一个用户 gcy2016 的售后诊断工具系列）
