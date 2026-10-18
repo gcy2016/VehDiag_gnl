@@ -2,7 +2,7 @@
 
 **当前仓库：VehDiag_gnl（General 通用版）**——功能和自用版（SEF）一致：故障码查询、报文数据分析（故障码识别、疑似异常、信号曲线、报文提取）、AI 助手。但仓库里只有代码，不含任何车型资料：DBC 和诊断问卷 Excel 都由使用者自己上传（只存在本机浏览器）。公开、不需要密码。
 
-- 文件：`index.html`；`canlog.js`、`plot.js`、`ai.js` 与 SEF 的 `tools/web/` 同源，改了要同步；`dbc.js` 是 SEF `tools/dbc.py` 的 JS 版，`qn.js` 解析问卷，`uds.js` 是 SEF `tools/uds.json` 的副本；`诊断问卷模板.xlsx` 只放通用示例码。
+- 文件：`index.html`；`canlog.js`、`plot.js`、`ai.js` 与 SEF 的 `tools/web/` 同源，改了要同步；`dbc.js` 是 SEF `tools/dbc.py` 的 JS 版，`qn.js` 解析问卷（SHR 有同一份 `qn.js` 和故障码查询页面代码，改了要同步），`uds.js` 是 SEF `tools/uds.json` 的副本；`诊断问卷模板.xlsx` 只放通用示例码。
 - 不要把任何真实 DBC、问卷或报文放进这个仓库。
 
 ## 四个仓库的定位（同一个用户 gcy2016 的售后诊断工具系列）
@@ -10,7 +10,7 @@
 |---|---|---|---|
 | VehDiag_pub | Public 公共版 | 给非专业人员自助查询故障码；没有报文解析和数据分析功能。打开即用，无密码 | https://gcy2016.github.io/VehDiag_pub/ |
 | VehDiag_sef | Self 自用版 | 用户自己用；功能最多，加密内容也最多（网站数据用 6 位网站密码，原始 DBC / 问卷用长的原始文件密码） | https://gcy2016.github.io/VehDiag_sef/ |
-| VehDiag_shr | Share 分享版 | 给有一定专业能力的人查看报文；只能看原始报文（另有 AI 助手），不带 DBC、不做解析。无密码 | https://gcy2016.github.io/VehDiag_shr/ |
+| VehDiag_shr | Share 分享版 | 给有一定专业能力的人查看报文；只能看原始报文（另有 AI 助手），不带 DBC、不做解析；另有故障码查询（诊断问卷由使用者自己上传，同 GNL）。无密码 | https://gcy2016.github.io/VehDiag_shr/ |
 | VehDiag_gnl | General 通用版 | 功能和自用版一致，但仓库里只有代码，DBC、诊断问卷都由使用者自己上传。无密码 | https://gcy2016.github.io/VehDiag_gnl/ |
 
 ## 通用规则（四个仓库相同）

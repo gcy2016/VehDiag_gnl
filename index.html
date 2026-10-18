@@ -26,6 +26,8 @@
     border-radius: 16px; padding: 20px 20px 18px; margin-bottom: 14px; }
   .hero h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: .5px; }
   .hero p { margin: 0; opacity: .88; font-size: 14px; }
+  .hero .gh { margin-top: 8px; padding: 6px 10px; background: rgba(255,255,255,.14); border-radius: 8px; opacity: 1; }
+  .hero .gh a { color: #fff; font-weight: 600; text-decoration: underline; }
   .tag { display: inline-block; background: rgba(255,255,255,.2); border-radius: 6px; padding: 0 6px; font-size: 12px; margin-left: 6px; vertical-align: 3px; }
   .card { background: var(--card); border-radius: 16px; padding: 18px 16px; margin-bottom: 14px; }
   .step { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -181,6 +183,7 @@
     <h1>🔧 售后诊断助手<span class="tag">通用版</span></h1>
     <p>自行加载 DBC 与诊断问卷 · DTC 查询 · 报文数据分析</p>
     <p>👇 先加载资料，再选功能 · 所有文件只在本机浏览器内读取，不会上传</p>
+    <p class="gh">💡 如果你用的 AI 能访问 GitHub 仓库，可以让它读取本仓库 <a href="https://github.com/gcy2016/VehDiag_gnl" target="_blank" rel="noopener">github.com/gcy2016/VehDiag_gnl</a> 的代码，再把报文（和 DBC / 诊断问卷）发给它做 CAN 报文数据分析</p>
   </div>
 
   <div id="app">
