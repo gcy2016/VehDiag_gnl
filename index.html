@@ -102,6 +102,8 @@
   .drop { display: block; border: 2px dashed var(--line); border-radius: 14px; padding: 22px 12px; text-align: center; color: var(--muted); cursor: pointer; }
   .drop.over { border-color: var(--blue); background: var(--blue-l); }
   .drop b { color: var(--blue); }
+  .drop.flash { animation: flash .5s ease-in-out 3; }
+  @keyframes flash { 50% { border-color: var(--blue); background: var(--blue-l); } }
   .bar { height: 6px; background: var(--blue-l); border-radius: 3px; overflow: hidden; margin-top: 10px; }
   .bar div { height: 100%; width: 0; background: var(--blue); transition: width .2s; }
   .kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 12px; }
@@ -419,6 +421,7 @@ function show(v, silent) {
   $('dbcCur').textContent = DBC ? 'DBC：' + DBC.name : '未加载 DBC（只能看报文和故障码）';
   if (v === 'dtc' && !silent) $('q').focus();
   if (v === 'log' && plot) plot.draw();
+  if (v === 'log' && !silent && !LOG && !LOADING) flash($('drop'));   // 还没打开报文：带到“打开报文”并闪一下提示
 }
 
 $('fDbc').addEventListener('change', e => { loadDbc([...e.target.files]); e.target.value = ''; });
@@ -493,24 +496,65 @@ const keyOf = m => m.ext ? (m.id | CanLog.EXT) >>> 0 : m.id;
 const hexId = id => '0x' + (id & 0x1FFFFFFF).toString(16).toUpperCase() + (id & CanLog.EXT ? 'x' : '');
 const fmtT = t => t.toFixed(3) + ' s';
 
-async function openFile(f) {
+function flash(el) {
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+// 报文存在本机浏览器（IndexedDB，只留最近一个），切换功能、刷新或下次打开都不用重新选择；点“清除”才删除
+const LogDB = {
+  open() {
+    return new Promise((ok, no) => {
+      const r = indexedDB.open('gnl', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('files');
+      r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error);
+    });
+  },
+  async run(mode, fn) {
+    const db = await this.open();
+    return new Promise((ok, no) => {
+      const tx = db.transaction('files', mode), req = fn(tx.objectStore('files'));
+      tx.oncomplete = () => { db.close(); ok(req.result); }; tx.onerror = tx.onabort = () => { db.close(); no(tx.error); };
+    });
+  },
+  get() { return this.run('readonly', st => st.get('log')); },
+  put(v) { return this.run('readwrite', st => st.put(v, 'log')); },
+  del() { return this.run('readwrite', st => st.delete('log')); },
+};
+let LOADING = false, LOADID = 0, LOGSAVED = false;   // LOADID：读取中又选了新文件时，旧的那次读完直接丢弃
+
+async function openFile(f, restored) {
   if (!f) return;
+  const id = ++LOADID;
+  LOADING = true;
   $('bar').hidden = false;
   const bar = $('bar').firstElementChild;
   bar.style.width = '2%';
-  $('info').innerHTML = `<p class="hint">正在读取 ${esc(f.name)} …</p>`;
+  $('info').innerHTML = `<p class="hint">${restored ? '正在加载上次打开的报文' : '正在读取'} ${esc(f.name)} …</p>`;
   try {
-    LOG = await CanLog.read(f.name, await f.arrayBuffer(), p => bar.style.width = Math.round(p * 100) + '%');
+    const buf = await f.arrayBuffer();
+    const log = await CanLog.read(f.name, buf, p => id === LOADID && (bar.style.width = Math.round(p * 100) + '%'));
+    if (id !== LOADID) return;
+    LOG = log;
     LOGNAME = f.name;
     bar.style.width = '100%';
+    LOGSAVED = !!restored;
+    if (!restored) try { await LogDB.put({ name: f.name, data: new Blob([buf]) }); LOGSAVED = true; } catch (e) {}
     SIGS = [];
     analyze();
   } catch (e) {
+    if (id !== LOADID) return;
     LOG = null;
     $('info').innerHTML = `<div class="warn">读取失败：${esc(e.message || e)}</div>`;
     $('res').hidden = true;
+    if (restored) LogDB.del().catch(() => {});
   }
+  LOADING = false;
   setTimeout(() => $('bar').hidden = true, 600);
+}
+function clearLog() {
+  LOG = null; LOGNAME = ''; SIGS = [];
+  $('info').innerHTML = ''; $('res').hidden = true;
+  LogDB.del().catch(() => {});
 }
 
 function analyze() {
@@ -532,7 +576,9 @@ function analyze() {
   if (DBC && unknown.length)
     h += `<details class="hint"><summary>DBC 中没有定义的 ID（${unknown.length} 个）</summary>${unknown.map(id =>
       `${hexId(id)}（${LOG.byId.get(id).length} 帧）`).join('、')}</details>`;
+  h += `<div class="ld">${LOGSAVED ? '报文已记在本机，下次打开不用重新选择' : '⚠️ 报文太大或浏览器不允许，未能记在本机，下次需要重新选择'} <button id="rmLog">清除</button></div>`;
   $('info').innerHTML = h;
+  $('rmLog').onclick = clearLog;
   show(view);
   $('res').hidden = false;
   renderDTC();
@@ -861,6 +907,7 @@ const AIUI = AI.mount($('ai'), () => ({
   sigs: SIGS, win: plot ? [plot.x0, plot.x1] : [0, LOG ? LOG.dur : 0], trace: PICK.size ? pickedText() : TRTXT,
 }));
 start();
+LogDB.get().then(v => { if (v && v.data && !LOG && !LOADING) openFile({ name: v.name, arrayBuffer: () => v.data.arrayBuffer() }, true); }).catch(() => {});
 $('toAI').onclick = () => AIUI.takeData();   // 选好的报文 → 复制并附带到 AI 助手，打开全屏聊天
 </script>
 </body>
